@@ -13,9 +13,10 @@
 *.key
 *.pem
 
+
 # IDEs & OS
 .vscode/
-.idea/
+.idea
 .DS_Store
 
 # Logs
@@ -25,4 +26,5 @@ yarn-error.log*
 
 # Deployment
 deploy.sh
+logs-prod.sh
 # Optional: if you want to keep deploy.sh but hide secrets, use env vars
