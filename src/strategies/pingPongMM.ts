@@ -5,11 +5,21 @@ import { fetchTokenBalance } from '../utils/tokenUtils';
 import { RaydiumTradeApiClient } from '../api/raydiumClient';
 import { CONFIG } from '../config';
 
+function log(message: string, isError = false) {
+    const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
+    const logMessage = `[${timestamp}] ${message}`;
+    if (isError) {
+        console.error(logMessage);
+    } else {
+        console.log(logMessage);
+    }
+}
+
 export async function runMarketMaker(connection: Connection, userKeypair: Keypair) {
     const client = new RaydiumTradeApiClient(connection, userKeypair);
     let lastTokenPerSol: Decimal | null = null;
 
-    console.log("🚀 Starting Ping-Pong Market Maker (Aggressive 0.01 SOL)...");
+    log("🚀 Starting Ping-Pong Market Maker (Aggressive 0.01 SOL)...");
 
     while (true) {
         try {
@@ -22,19 +32,19 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
 
             if (!lastTokenPerSol) {
                 lastTokenPerSol = currentTokenPerSol;
-                console.log(`Initial Price: 1 SOL = ${currentTokenPerSol.toFixed(4)} Token. Waiting for movement...`);
+                log(`Initial Price: 1 SOL = ${currentTokenPerSol.toFixed(4)} Token. Waiting for movement...`);
                 await new Promise(r => setTimeout(r, CONFIG.LOOP_DELAY_MS));
                 continue;
             }
 
             const priceChange = currentTokenPerSol.sub(lastTokenPerSol).div(lastTokenPerSol).toNumber();
-            console.log(`Balances | SOL: ${solBalance.toFixed(4)} | Token: ${tokenBalance.toFixed(0)}`);
-            console.log(`Price: 1 SOL = ${currentTokenPerSol.toFixed(4)} Token | Change: ${(priceChange * 100).toFixed(2)}%`);
+            log(`Balances | SOL: ${solBalance.toFixed(4)} | Token: ${tokenBalance.toFixed(0)}`);
+            log(`Price: 1 SOL = ${currentTokenPerSol.toFixed(4)} Token | Change: ${(priceChange * 100).toFixed(2)}%`);
 
             // 2. Decide to BUY or SELL
             if (priceChange >= CONFIG.PRICE_CHANGE_THRESHOLD && solBalance.gt(CONFIG.TRADE_AMOUNT_SOL.mul(2))) {
                 // Price dropped (1 SOL buys MORE tokens) -> BUY THE DIP
-                console.log(`📉 Price Dropped ${ (priceChange * 100).toFixed(2) }%! Buying ${CONFIG.TRADE_AMOUNT_SOL} SOL worth of tokens...`);
+                log(`📉 Price Dropped ${ (priceChange * 100).toFixed(2) }%! Buying ${CONFIG.TRADE_AMOUNT_SOL} SOL worth of tokens...`);
                 const tx = await client.getSwapTx({
                     inputMint: CONFIG.SOL_MINT,
                     outputMint: CONFIG.TOKEN_MINT,
@@ -50,7 +60,7 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
                 // Price rose (1 SOL buys LESS tokens) -> SELL THE RIP
                 const tokensToSell = currentTokenPerSol.mul(CONFIG.TRADE_AMOUNT_SOL);
                 if (tokenBalance.gt(tokensToSell)) {
-                    console.log(`📈 Price Rose ${ (priceChange * 100).toFixed(2) }%! Selling ${tokensToSell.toFixed(0)} tokens for SOL...`);
+                    log(`📈 Price Rose ${ (priceChange * 100).toFixed(2) }%! Selling ${tokensToSell.toFixed(0)} tokens for SOL...`);
                     const tx = await client.getSwapTx({
                         inputMint: CONFIG.TOKEN_MINT,
                         outputMint: CONFIG.SOL_MINT,
@@ -66,7 +76,7 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
 
             await new Promise(r => setTimeout(r, CONFIG.LOOP_DELAY_MS));
         } catch (err) {
-            console.error('Error in MM loop (retrying in 10s):', err);
+            log(`Error in MM loop (retrying in 10s): ${err}`, true);
             await new Promise(r => setTimeout(r, 10000));
         }
     }
