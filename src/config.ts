@@ -13,11 +13,19 @@ export const CONFIG = {
     SOL_DECIMALS: 9,
 
     // Strategy Settings
-    TRADE_AMOUNT_SOL: new Decimal(0.01), // Size per trade in SOL
-    PRICE_CHANGE_THRESHOLD: 0.0015,      // 0.15% move triggers trade
-    LOOP_DELAY_MS: 30000,                // Check interval (30 seconds)
+    // Increased trade size slightly so network fees are a smaller % of the trade.
+    TRADE_AMOUNT_SOL: new Decimal(0.02), 
     
+    // Increased threshold to 1.0% to ensure trades only happen on meaningful moves.
+    PRICE_CHANGE_THRESHOLD: 0.01,      
+
+    // Increased delay to 120 seconds to reduce "noise" trading.
+    LOOP_DELAY_MS: 120000,                
+
     // Trading Settings
-    SLIPPAGE_BPS: 100,                   // 1% slippage
-    PRIORITY_FEE_MICRO_LAMPORTS: "100000",
+    // Tightened slippage to 0.5% (50 BPS) to preserve more value per trade.
+    SLIPPAGE_BPS: 50,                   
+    
+    // Lowered priority fee to 50,000 micro-lamports (0.00005 SOL).
+    PRIORITY_FEE_MICRO_LAMPORTS: "50000",
 };
