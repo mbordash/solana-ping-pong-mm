@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Solana MM Dashboard - Quick Start Script
+
+set -e
+
+echo "🚀 Setting up Solana Market Maker Dashboard..."
+
+# Check if node is installed
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js is not installed. Please install it first."
+    exit 1
+fi
+
+echo "✅ Node.js found: $(node --version)"
+
+# Install dependencies
+echo ""
+echo "📦 Installing root dependencies..."
+npm install
+
+echo ""
+echo "📦 Installing frontend dependencies..."
+cd frontend
+npm install
+cd ..
+
+# Check for .env file
+if [ ! -f .env ]; then
+    echo ""
+    echo "⚠️  No .env file found. Creating .env.example..."
+    cp .env.example .env 2>/dev/null || echo ""
+    echo ""
+    echo "⚠️  Please set up your .env file with:"
+    echo "   - MNEMONIC=your_seed_phrase"
+    echo "   - HELIUS_RPC=your_rpc_url (optional)"
+    echo ""
+    echo "Then run: npm run dev"
+else
+    echo "✅ .env file found"
+fi
+
+# Check for frontend .env
+if [ ! -f frontend/.env.local ]; then
+    echo ""
+    echo "📝 Creating frontend/.env.local..."
+    cp frontend/.env.local.example frontend/.env.local 2>/dev/null || echo "NEXT_PUBLIC_API_URL=http://localhost:3001/api" > frontend/.env.local
+    echo "✅ Frontend .env created"
+fi
+
+echo ""
+echo "✅ Setup complete!"
+echo ""
+echo "🎯 Ready to start development:"
+echo "   npm run dev"
+echo ""
+echo "This will start:"
+echo "   - Backend API on http://localhost:3001"
+echo "   - Frontend Dashboard on http://localhost:3000"
+echo ""
+
+

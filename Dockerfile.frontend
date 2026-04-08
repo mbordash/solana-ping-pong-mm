@@ -1,0 +1,33 @@
+# Frontend Dockerfile
+FROM node:18-alpine
+
+WORKDIR /usr/src/app/frontend
+
+# Declare build arguments for API configuration
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_PASSWORD
+
+# Set environment variables for Next.js build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_PASSWORD=$NEXT_PUBLIC_API_PASSWORD
+
+# Install dependencies
+COPY frontend/package*.json ./
+
+# Use npm install to ensure devDependencies are installed (needed for build)
+RUN npm install --legacy-peer-deps --no-audit --no-fund
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Run the build
+RUN npm run build
+
+# Now set production environment after build is complete
+ENV NODE_ENV=production
+
+EXPOSE 3000
+
+
+# Command to start the frontend server
+CMD ["npm", "run", "start", "--", "-p", "3000", "-H", "0.0.0.0"]

@@ -1,0 +1,37 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ping-pong-mm-backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # IMPORTANT: Set ALLOWED_ORIGINS to your frontend URL for CORS to work
+      - ALLOWED_ORIGINS=http://localhost:3000  # Change to your frontend URL
+    ports:
+      - "3001:3001"
+    networks:
+      - mmnet
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:3001/api  # Change to your server IP/domain
+        - NEXT_PUBLIC_API_PASSWORD=dev-password  # Change to your secure password
+    container_name: ping-pong-mm-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - mmnet
+
+networks:
+  mmnet:
+    driver: bridge
+

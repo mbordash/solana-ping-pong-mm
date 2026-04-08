@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# =============================================================================
+# docker-prune.sh — Clean up Docker to free disk space
+# =============================================================================
+# Run this before deploying if you get "no space left on device" errors
+
+set -e
+
+echo "🧹 Docker System Cleanup"
+echo "───────────────────────────────────────────────────────────────"
+
+echo "📊 Docker disk usage BEFORE cleanup:"
+docker system df || echo "⚠️  Could not get disk usage"
+
+echo ""
+echo "🧹 Removing stopped containers..."
+docker container prune -f
+
+echo "🧹 Removing unused images..."
+docker image prune -f
+
+echo "🧹 Removing unused volumes..."
+docker volume prune -f
+
+echo "🧹 Removing build cache..."
+docker builder prune -f
+
+echo ""
+echo "📊 Docker disk usage AFTER cleanup:"
+docker system df || echo "⚠️  Could not get disk usage"
+
+echo ""
+echo "✅ Docker cleanup complete!"
+echo ""
+echo "💡 Tip: Run this before large deployments to prevent 'no space left on device' errors"
+

@@ -1,0 +1,73 @@
+#!/bin/bash
+set -euo pipefail
+
+# --- Deployment Configuration ---
+# TODO: Update these values with your deployment server details
+HOST="your.server.ip.address"
+USER="your_ssh_username"
+KEY="~/.ssh/your-deployment-key.pem"
+REMOTE_DIR="~/solana-ping-pong-mm"
+APP_NAME="ping-pong-mm"
+
+echo "🚀 Deploying Solana Ping-Pong Market Maker..."
+
+# 1. Create remote directory
+echo "📁 Creating remote directory structure..."
+ssh -i "$KEY" "$USER@$HOST" "mkdir -p $REMOTE_DIR"
+
+# 2. Sync Codebase (using rsync if available, otherwise scp)
+echo "📤 Syncing code to remote..."
+# We exclude node_modules and local artifacts for speed
+# Using rsync for better control over paths and exclusions
+rsync -avz -e "ssh -i $KEY" --delete --exclude 'node_modules' --exclude '.next' --exclude '.git' --exclude '.turbo' --exclude 'dist' \
+    ./src \
+    ./frontend \
+    ./backend \
+    .env \
+    package.json \
+    package-lock.json \
+    tsconfig.json \
+    .dockerignore \
+    Dockerfile.backend \
+    Dockerfile.frontend \
+    docker-compose.yml \
+    "$USER@$HOST:$REMOTE_DIR/"
+
+# 3. Build and Start Containers on Remote
+ssh -i "$KEY" "$USER@$HOST" bash -s -- "$REMOTE_DIR" << 'REMOTE'
+    set -euo pipefail
+    cd "$1"
+
+    if docker compose version >/dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+    elif command -v docker-compose >/dev/null 2>&1; then
+        COMPOSE_CMD="docker-compose"
+    else
+        echo "❌ Docker Compose is not installed. Install docker compose plugin or docker-compose."
+        exit 1
+    fi
+
+    echo "🧹 Stopping and removing old containers..."
+    $COMPOSE_CMD down || true
+
+    # Clean up Docker system to free up disk space
+    echo "🧹 Cleaning up Docker system..."
+    docker system prune -f --volumes
+    docker image prune -a -f
+
+    # Ensure stale host artifacts do not leak into Docker build context
+    # (Though rsync delete and .dockerignore should handle this)
+    rm -rf frontend/node_modules frontend/.next backend/node_modules dist/ || true
+
+    echo "🔨 Building and starting containers with Docker Compose..."
+    # Build with --no-cache to ensure we get a fresh build if something was failing
+    $COMPOSE_CMD up -d --build
+
+    echo "📊 Listing running containers:"
+    docker ps
+    echo "📜 To view logs, run: $COMPOSE_CMD logs -f"
+REMOTE
+
+echo "✅ Deployment complete!"
+
+

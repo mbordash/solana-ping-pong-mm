@@ -1,0 +1,27 @@
+# Use the standard Node image (not slim) to ensure all build dependencies are present
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Copy root package files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install all dependencies including devDependencies (needed for TypeScript compilation)
+# Don't set NODE_ENV=production yet - we need devDependencies for build
+RUN npm install --legacy-peer-deps --no-audit --no-fund
+
+# Copy source code and backend files
+COPY src ./src
+COPY backend ./backend
+
+# Run build to catch any TypeScript errors during the Docker build
+RUN npm run build
+
+# Now set production environment after build is complete
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+# Command to start the backend server
+CMD ["npx", "ts-node", "backend/server.ts"]

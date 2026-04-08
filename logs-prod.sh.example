@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# =============================================================================
+# logs-prod.sh — SIMPLE & RELIABLE
+# =============================================================================
+# This script monitors logs from your production deployment.
+# Update the configuration values below with your server details.
+
+HOST="your.server.ip.address"
+USER="your_ssh_username"
+KEY="~/.ssh/your-deployment-key.pem"
+SSH_PORT="22"
+
+echo "📡 Live logs from MM Bot (Ctrl+C to stop)"
+echo "───────────────────────────────────────────────────────────────"
+
+ssh -p "$SSH_PORT" -i "$KEY" "$USER@$HOST" '
+    trap "kill 0" EXIT
+
+    docker logs -f ping-pong-mm-backend &
+
+    wait
+'
+
+
