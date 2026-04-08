@@ -8,8 +8,12 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_API_PASSWORD
 
 # Set environment variables for Next.js build
+# These must be set BEFORE the build for Next.js to include them in the production bundle
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_PASSWORD=$NEXT_PUBLIC_API_PASSWORD
+
+# Debug: Show that variables are set during build
+RUN echo "Building with NEXT_PUBLIC_API_PASSWORD=$NEXT_PUBLIC_API_PASSWORD"
 
 # Install dependencies
 COPY frontend/package*.json ./
@@ -20,7 +24,7 @@ RUN npm install --legacy-peer-deps --no-audit --no-fund
 # Copy frontend source
 COPY frontend/ ./
 
-# Run the build
+# Run the build - must have env vars available here
 RUN npm run build
 
 # Now set production environment after build is complete

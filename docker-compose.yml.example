@@ -9,7 +9,10 @@ services:
       - .env
     environment:
       # IMPORTANT: Set ALLOWED_ORIGINS to your frontend URL for CORS to work
-      - ALLOWED_ORIGINS=http://localhost:3000  # Change to your frontend URL
+      # This value comes from .env file (ALLOWED_ORIGINS variable)
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+      # Dashboard password comes from .env (BASIC_AUTH_PASS variable)
+      - BASIC_AUTH_PASS=${BASIC_AUTH_PASS}
     ports:
       - "3001:3001"
     networks:
@@ -20,8 +23,11 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - NEXT_PUBLIC_API_URL=http://localhost:3001/api  # Change to your server IP/domain
-        - NEXT_PUBLIC_API_PASSWORD=dev-password  # Change to your secure password
+        # Backend API URL that the frontend connects to
+        # This value comes from .env file (FRONTEND_API_URL variable)
+        - NEXT_PUBLIC_API_URL=${FRONTEND_API_URL:-http://localhost:3001/api}
+        # Dashboard password - comes from .env (FRONTEND_API_PASSWORD variable)
+        - NEXT_PUBLIC_API_PASSWORD=${FRONTEND_API_PASSWORD}
     container_name: ping-pong-mm-frontend
     restart: always
     ports:

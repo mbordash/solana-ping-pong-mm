@@ -40,22 +40,40 @@ A lightweight, high-performance Solana Market Maker (MM) bot with an integrated 
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` with your Solana wallet details:
+   Edit `.env` with your configuration:
    ```env
+   # Your Solana wallet mnemonic (KEEP THIS SECRET!)
    MNEMONIC="your twelve word seed phrase goes here..."
    HELIUS_RPC="https://mainnet.helius-rpc.com/?api-key=your-key"
+   
+   # Backend configuration
    PORT=3001
+   BASIC_AUTH_USER=admin
+   BASIC_AUTH_PASS=your-secure-dashboard-password
+   
+   # CORS - set to your frontend URL
+   ALLOWED_ORIGINS=http://localhost:3000
+   
+   # Frontend configuration
+   FRONTEND_API_URL=http://localhost:3001/api
+   FRONTEND_API_PASSWORD=your-secure-dashboard-password
    ```
 
-3. **Start with Docker Compose**
+3. **Create docker-compose.yml**
+   ```bash
+   cp docker-compose.yml.example docker-compose.yml
+   ```
+   The file will automatically use values from `.env`
+
+4. **Start with Docker Compose**
    ```bash
    docker compose up -d
    ```
    This will start:
-   - **Frontend Dashboard**: http://localhost:3000
-   - **Backend API**: http://localhost:3001/api
+   - **Frontend Dashboard**: http://localhost:3000 (requires password login)
+   - **Backend API**: http://localhost:3001/api (requires Basic Auth)
 
-4. **View logs**
+5. **View logs**
    ```bash
    docker compose logs -f
    ```
@@ -96,6 +114,34 @@ A lightweight, high-performance Solana Market Maker (MM) bot with an integrated 
 - You want faster feedback loops during development
 - You want to debug TypeScript code directly
 - You're testing new features locally before containerizing
+
+## 🛡️ Security
+
+### Environment Variable Protection
+- **`.env` file is NOT tracked in git** - This protects your mnemonic, API keys, and passwords
+- **Only `.env.example` is in git** - It serves as a template for setting up new deployments
+- Use `.gitignore` entries to ensure sensitive files aren't accidentally committed
+
+### Dashboard Authentication
+- **Frontend**: Simple password prompt (shows on page load if `NEXT_PUBLIC_API_PASSWORD` is set)
+- **Backend API**: All endpoints require HTTP Basic Authentication with `Authorization: Basic <credentials>`
+  - Username: Configured in `.env` (default: `admin`)
+  - Password: Configured in `.env` (default: from `BASIC_AUTH_PASS`)
+- **Health check endpoint** (`/api/health`) is the only public endpoint
+
+### CORS (Cross-Origin Resource Sharing)
+- Backend only allows requests from frontend URL specified in `ALLOWED_ORIGINS` environment variable
+- If you see CORS errors in browser console:
+  1. Check what URL your frontend is running on (e.g., `http://52.211.208.155:3000`)
+  2. Update `ALLOWED_ORIGINS` in `.env` to match
+  3. Restart backend: `docker compose restart backend`
+
+### For Production Deployments
+- Use **HTTPS** instead of HTTP (requires SSL certificate)
+- Change default credentials in `.env` to strong, random passwords
+- Consider using a reverse proxy (nginx) with additional authentication layers
+- Restrict the server's firewall to only allow access from trusted IPs
+- Store `.env` securely on the server (appropriate file permissions: `chmod 600 .env`)
 
 ## 🛠 Configuration
 
@@ -209,10 +255,29 @@ nano logs-prod.sh
 
 ## 🐛 Troubleshooting
 
+### CORS Error: "No 'Access-Control-Allow-Origin' header"
+- This error appears in the browser when the frontend can't reach the backend API
+- **Solution**: Update `ALLOWED_ORIGINS` in `.env` to match your frontend URL (e.g., `http://52.211.208.155:3000`)
+- Restart the backend: `docker compose restart backend`
+- **Note**: For production, ensure your frontend IP/domain matches exactly in `ALLOWED_ORIGINS`
+
+### Dashboard Password Prompt Not Appearing
+- If you see the dashboard without a login screen, `NEXT_PUBLIC_API_PASSWORD` is not set
+- **Solution**: 
+  1. Ensure `FRONTEND_API_PASSWORD` is set in `.env` (not empty)
+  2. Rebuild frontend: `docker compose up -d --build frontend`
+  3. Refresh browser (force refresh with Ctrl+Shift+R or Cmd+Shift+R)
+
+### Dashboard connected but API returns 401 Unauthorized
+- The frontend is sending incorrect credentials to the backend
+- **Solution**: Ensure `BASIC_AUTH_PASS` in `.env` matches the password you entered on the login screen
+- Both values must be identical for authentication to work
+
 ### Dashboard not connecting to API?
 - Check that backend is running: `curl http://localhost:3001/api/health`
-- Verify `NEXT_PUBLIC_API_URL` environment variable in frontend
+- Verify `FRONTEND_API_URL` environment variable in frontend
 - Check Docker network connectivity: `docker network inspect mmnet`
+- Check backend logs: `docker compose logs backend`
 
 ### Bot not starting?
 - Verify `.env` file has valid `MNEMONIC` and `HELIUS_RPC`

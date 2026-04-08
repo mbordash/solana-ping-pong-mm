@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -11,10 +11,19 @@ function getAuthHeader(password: string) {
 }
 
 export default function Dashboard() {
-  const [password, setPassword] = useState<string>(DEFAULT_PASSWORD);
-  const [showPrompt, setShowPrompt] = useState(!DEFAULT_PASSWORD);
+  // SECURITY: Never auto-populate password! Always require user to enter it.
+  // DEFAULT_PASSWORD is only used to determine if authentication is configured.
+  const [password, setPassword] = useState<string>(''); // Always start empty
+  const [showPrompt, setShowPrompt] = useState(!!DEFAULT_PASSWORD); // Show prompt if password is configured
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Debug on mount
+  useEffect(() => {
+    console.log('🔐 Dashboard initialized');
+    console.log('Has password configured:', !!DEFAULT_PASSWORD);
+    console.log('Current showPrompt:', !!DEFAULT_PASSWORD); // Should be true if password configured
+  }, []);
 
   // Custom fetcher with auth
   const fetcher = (url: string) =>
@@ -89,8 +98,20 @@ export default function Dashboard() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>🤖 Solana MM Dashboard</h1>
-        <p style={styles.subtitle}>Market Maker Status & Control</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={styles.title}>🤖 Solana MM Dashboard</h1>
+            <p style={styles.subtitle}>Market Maker Status & Control</p>
+          </div>
+          {DEFAULT_PASSWORD && (
+            <button
+              onClick={() => { setPassword(''); setShowPrompt(true); }}
+              style={{ ...styles.button, fontSize: '12px', padding: '6px 12px' }}
+            >
+              🔒 Logout
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Status Card */}
