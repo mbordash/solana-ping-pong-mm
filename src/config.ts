@@ -16,8 +16,8 @@ export const CONFIG = {
     // Increased trade size slightly so network fees are a smaller % of the trade.
     TRADE_AMOUNT_SOL: new Decimal(0.02), 
     
-    // Increased threshold to 1.0% to ensure trades only happen on meaningful moves.
-    PRICE_CHANGE_THRESHOLD: 0.01,      
+    // Relaxed threshold to 0.65% for more frequent trading activity.
+    PRICE_CHANGE_THRESHOLD: 0.0065,
 
     // Increased delay to 120 seconds to reduce "noise" trading.
     LOOP_DELAY_MS: 120000,                

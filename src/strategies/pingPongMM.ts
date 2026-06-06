@@ -41,10 +41,13 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
             log(`Balances | SOL: ${solBalance.toFixed(4)} | Token: ${tokenBalance.toFixed(0)}`);
             log(`Price: 1 SOL = ${currentTokenPerSol.toFixed(4)} Token | Change: ${(priceChange * 100).toFixed(2)}%`);
 
+            // Minimum sell size: equivalent to 0.001 SOL worth of tokens (avoids dust trades)
+            const MIN_SELL_TOKENS = currentTokenPerSol.mul(new Decimal('0.001'));
+
             // 2. Decide to BUY or SELL
             if (priceChange >= CONFIG.PRICE_CHANGE_THRESHOLD && solBalance.gt(CONFIG.TRADE_AMOUNT_SOL.mul(2))) {
-                // Price dropped (1 SOL buys MORE tokens) -> BUY THE DIP
-                log(`📉 Price Dropped ${ (priceChange * 100).toFixed(2) }%! Buying ${CONFIG.TRADE_AMOUNT_SOL} SOL worth of tokens...`);
+                // Token price dropped (1 SOL buys MORE tokens) -> BUY THE DIP
+                log(`📉 Token Price Dropped ${ (priceChange * 100).toFixed(2) }%! Buying ${CONFIG.TRADE_AMOUNT_SOL} SOL worth of tokens...`);
                 const tx = await client.getSwapTx({
                     inputMint: CONFIG.SOL_MINT,
                     outputMint: CONFIG.TOKEN_MINT,
@@ -57,10 +60,13 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
                 lastTokenPerSol = currentTokenPerSol; 
             } 
             else if (priceChange <= -CONFIG.PRICE_CHANGE_THRESHOLD) {
-                // Price rose (1 SOL buys LESS tokens) -> SELL THE RIP
-                const tokensToSell = currentTokenPerSol.mul(CONFIG.TRADE_AMOUNT_SOL);
-                if (tokenBalance.gt(tokensToSell)) {
-                    log(`📈 Price Rose ${ (priceChange * 100).toFixed(2) }%! Selling ${tokensToSell.toFixed(0)} tokens for SOL...`);
+                // Token price rose (1 SOL buys LESS tokens) -> SELL THE RIP
+                // Cap sell amount to what we actually have (up to TRADE_AMOUNT_SOL worth)
+                const idealTokensToSell = currentTokenPerSol.mul(CONFIG.TRADE_AMOUNT_SOL);
+                const tokensToSell = Decimal.min(idealTokensToSell, tokenBalance.mul(new Decimal('0.99')));
+
+                if (tokensToSell.gte(MIN_SELL_TOKENS)) {
+                    log(`📈 Token Price Rose ${ (priceChange * 100).toFixed(2) }%! Selling ${tokensToSell.toFixed(0)} tokens for SOL...`);
                     const tx = await client.getSwapTx({
                         inputMint: CONFIG.TOKEN_MINT,
                         outputMint: CONFIG.SOL_MINT,
@@ -70,7 +76,10 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
                         unwrapSol: true
                     });
                     await client.executeSwap(tx);
-                    lastTokenPerSol = currentTokenPerSol; 
+                    lastTokenPerSol = currentTokenPerSol;
+                } else {
+                    log(`⚠️ Sell signal but token balance too low to trade (have ${tokenBalance.toFixed(0)}, min needed: ${MIN_SELL_TOKENS.toFixed(0)}). Resetting reference.`);
+                    lastTokenPerSol = currentTokenPerSol;
                 }
             }
 
