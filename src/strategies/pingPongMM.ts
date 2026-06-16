@@ -58,32 +58,35 @@ export async function runMarketMaker(connection: Connection, userKeypair: Keypai
                 });
                 await client.executeSwap(tx);
                 lastTokenPerSol = currentTokenPerSol; 
-            } 
-            else if (priceChange <= -CONFIG.PRICE_CHANGE_THRESHOLD) {
-                // Token price rose (1 SOL buys LESS tokens) -> SELL THE RIP
-                // Cap sell amount to what we actually have (up to TRADE_AMOUNT_SOL worth)
-                const idealTokensToSell = currentTokenPerSol.mul(CONFIG.TRADE_AMOUNT_SOL);
-                const tokensToSell = Decimal.min(idealTokensToSell, tokenBalance.mul(new Decimal('0.99')));
+             }
+             else if (priceChange <= -CONFIG.PRICE_CHANGE_THRESHOLD) {
+                 // Token price rose (1 SOL buys LESS tokens) -> SELL THE RIP
+                 // Cap sell amount to what we actually have (up to TRADE_AMOUNT_SOL worth)
+                 const idealTokensToSell = currentTokenPerSol.mul(CONFIG.TRADE_AMOUNT_SOL);
+                 const tokensToSell = Decimal.min(idealTokensToSell, tokenBalance.mul(new Decimal('0.99')));
 
-                if (tokensToSell.gte(MIN_SELL_TOKENS)) {
-                    log(`📈 Token Price Rose ${ (priceChange * 100).toFixed(2) }%! Selling ${tokensToSell.toFixed(0)} tokens for SOL...`);
-                    const tx = await client.getSwapTx({
-                        inputMint: CONFIG.TOKEN_MINT,
-                        outputMint: CONFIG.SOL_MINT,
-                        amount: tokensToSell.toFixed(CONFIG.TOKEN_DECIMALS),
-                        slippageBps: CONFIG.SLIPPAGE_BPS, 
-                        inputDecimals: CONFIG.TOKEN_DECIMALS,
-                        unwrapSol: true
-                    });
-                    await client.executeSwap(tx);
-                    lastTokenPerSol = currentTokenPerSol;
-                } else {
-                    log(`⚠️ Sell signal but token balance too low to trade (have ${tokenBalance.toFixed(0)}, min needed: ${MIN_SELL_TOKENS.toFixed(0)}). Resetting reference.`);
-                    lastTokenPerSol = currentTokenPerSol;
-                }
-            }
+                 if (tokensToSell.gte(MIN_SELL_TOKENS)) {
+                     log(`📈 Token Price Rose ${ (priceChange * 100).toFixed(2) }%! Selling ${tokensToSell.toFixed(0)} tokens for SOL...`);
+                     const tx = await client.getSwapTx({
+                         inputMint: CONFIG.TOKEN_MINT,
+                         outputMint: CONFIG.SOL_MINT,
+                         amount: tokensToSell.toFixed(CONFIG.TOKEN_DECIMALS),
+                         slippageBps: CONFIG.SLIPPAGE_BPS,
+                         inputDecimals: CONFIG.TOKEN_DECIMALS,
+                         unwrapSol: true
+                     });
+                     await client.executeSwap(tx);
+                     lastTokenPerSol = currentTokenPerSol;
+                 } else {
+                     log(`⚠️ Sell signal but token balance too low to trade (have ${tokenBalance.toFixed(0)}, min needed: ${MIN_SELL_TOKENS.toFixed(0)}). Resetting reference.`);
+                     lastTokenPerSol = currentTokenPerSol;
+                 }
+             } else {
+                 // Price change is within threshold - update reference for next comparison
+                 lastTokenPerSol = currentTokenPerSol;
+             }
 
-            await new Promise(r => setTimeout(r, CONFIG.LOOP_DELAY_MS));
+             await new Promise(r => setTimeout(r, CONFIG.LOOP_DELAY_MS));
         } catch (err) {
             log(`Error in MM loop (retrying in 10s): ${err}`, true);
             await new Promise(r => setTimeout(r, 10000));
